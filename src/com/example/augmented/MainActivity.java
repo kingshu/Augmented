@@ -1,37 +1,33 @@
 package com.example.augmented;
 
+import java.io.File;
+import java.io.FileOutputStream;
+
 import android.app.Activity;
-import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.Paint;
+import android.graphics.Bitmap;
+import android.graphics.Bitmap.CompressFormat;
 import android.hardware.Camera;
+import android.hardware.Camera.PictureCallback;
 import android.os.Bundle;
+import android.os.Environment;
 import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
+import android.view.View.OnClickListener;
 import android.view.Window;
 import android.view.WindowManager;
-import android.view.View.OnClickListener;
-import android.view.WindowManager.LayoutParams;
 import android.widget.Button;
-import android.widget.FrameLayout;
-import android.widget.RelativeLayout;
 import android.widget.Toast;
 
-public class MainActivity extends Activity {
-	
+public class MainActivity extends Activity  implements OnClickListener {
 	
 	private SurfaceView preview;
 	private SurfaceHolder previewHolder;
 	private Camera camera;
 	private boolean inPreview;
-	Canvas c;
-	private Paint p = new Paint();
-
 	
-	DrawView drv;
-
+	Button etch;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -42,9 +38,10 @@ public class MainActivity extends Activity {
        
 		setContentView(R.layout.activity_main);
 		
-
+		etch = (Button) findViewById(R.id.button1);
 		preview=(SurfaceView)findViewById(R.id.surfaceView1);
-		drv = new DrawView(this);
+		
+		etch.setOnClickListener(this);
 
 		previewHolder=preview.getHolder();
 		previewHolder.addCallback(surfaceCallback);
@@ -52,14 +49,7 @@ public class MainActivity extends Activity {
 		previewHolder.setFixedSize(getWindow().getWindowManager()
 				.getDefaultDisplay().getWidth(), getWindow().getWindowManager()
 				.getDefaultDisplay().getHeight());
-		
-		c = new Canvas();
-		p.setColor(Color.BLACK);
-		addContentView(drv, preview.getLayoutParams());
-		c.drawCircle(100, 100, 50, p);
-
 	}
-
 
 	@Override
 	public void onResume() {
@@ -128,8 +118,44 @@ public class MainActivity extends Activity {
 		}
 
 		public void surfaceDestroyed(SurfaceHolder holder) {
-			// no-op
 		}
 	};
+	
+	
+	public void captureImage() {
+		camera.takePicture(null, null, jpeg);
+		jpeg.onPictureTaken(null, camera);
+	}
+	
+	@Override
+	public void onClick(View v) {
+		if (v.getId() == R.id.button1) {
+			captureImage();
+		}	
+	}
+	
+	PictureCallback jpeg = new PictureCallback() {
 
+		@Override
+		public void onPictureTaken(byte[] data, Camera camera) {
+			String extr = Environment.getExternalStorageDirectory().toString();
+			File mFolder = new File(extr + "/Etch/");
+            if (!mFolder.exists()) {
+                mFolder.mkdir();
+            }
+			try {	
+				File f = new File(mFolder.getAbsolutePath(), "file");
+			    FileOutputStream fos = new FileOutputStream(f);
+			    fos.write(data);
+			    Bitmap bm = preview.getDrawingCache();
+			    bm.compress(CompressFormat.JPEG, 100, fos);
+			    fos.flush();
+			    fos.close();
+			} 
+			catch (Exception error) {
+			}	
+		}
+		
+	};	
 }
+	
